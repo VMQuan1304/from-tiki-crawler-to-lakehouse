@@ -18,10 +18,9 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "admin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio_password")
 BUCKET_NAME = "raw-data"
 
+
 def fetch_products():
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     print(f"Fetching from: {TIKI_API_URL}")
     try:
         response = requests.get(TIKI_API_URL, headers=headers, timeout=15)
@@ -34,6 +33,7 @@ def fetch_products():
         print(f"Request failed: {e}")
         return []
 
+
 def save_to_minio(data):
     if not data:
         print("No data to save")
@@ -41,44 +41,41 @@ def save_to_minio(data):
 
     # Convert to DataFrame
     df = pd.DataFrame(data)
-    
+
     # Store extraction timestamp
     ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    df['extracted_at'] = ts_str
-    
+    df["extracted_at"] = ts_str
+
     # Sanitize complex nested types (dict/list) to strings for Parquet compatibility
     for col in df.columns:
         if df[col].apply(lambda x: isinstance(x, (dict, list))).any():
             df[col] = df[col].astype(str)
-            
+
     # Save a copy locally as CSV for quick preview
     preview_dir = "preview_data"
     os.makedirs(preview_dir, exist_ok=True)
     preview_path = os.path.join(preview_dir, f"tiki_products_preview_{ts_str}.csv")
     df.to_csv(preview_path, index=False)
     print(f"Local CSV preview saved to: {preview_path}")
-    
+
     # Convert to Parquet formatting
     parquet_buffer = BytesIO()
     df.to_parquet(parquet_buffer, index=False)
-    
+
     # Init MinIO client
     s3_client = boto3.client(
-        's3',
+        "s3",
         endpoint_url=MINIO_ENDPOINT,
         aws_access_key_id=MINIO_ACCESS_KEY,
-        aws_secret_access_key=MINIO_SECRET_KEY
+        aws_secret_access_key=MINIO_SECRET_KEY,
     )
-    
+
     file_key = f"tiki_products/products_{ts_str}.parquet"
     print(f"Uploading to {BUCKET_NAME}/{file_key}")
-    
-    s3_client.put_object(
-        Bucket=BUCKET_NAME,
-        Key=file_key,
-        Body=parquet_buffer.getvalue()
-    )
+
+    s3_client.put_object(Bucket=BUCKET_NAME, Key=file_key, Body=parquet_buffer.getvalue())
     print("Upload complete.")
+
 
 if __name__ == "__main__":
     products = fetch_products()
