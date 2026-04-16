@@ -1,0 +1,17 @@
+dbt_tiki:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'tiki.duckdb'
+      extensions:
+        - httpfs
+        - aws
+      # DuckDB requires specific credentials injection for S3 when not using IAM roles
+      settings:
+        s3_endpoint: 'localhost:9000'
+        s3_access_key_id: 'admin'
+        s3_secret_access_key: 'minio_password'
+        s3_region: 'us-east-1'
+        s3_use_ssl: false
+        s3_url_style: 'path'
