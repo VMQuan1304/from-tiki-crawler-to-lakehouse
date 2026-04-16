@@ -19,15 +19,16 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        uv pip install --system -e .[dev]
+        uv venv
+        uv pip install -e .[dev]
 
     - name: Python Format Check (Black)
       run: |
-        black --check crawler/
+        uv run black --check crawler/
 
     - name: Python Lint (Flake8)
       run: |
-        flake8 crawler/ --max-line-length=100
+        uv run flake8 crawler/ --max-line-length=100
 
     - name: Run Crawler Tests
       run: |
@@ -35,8 +36,9 @@ jobs:
         export MINIO_ENDPOINT="http://localhost:9000"
         export MINIO_ACCESS_KEY="admin"
         export MINIO_SECRET_KEY="password"
-        cd crawler && pytest tests/
+        # Run pytest via uv run to pick up venv explicitly
+        uv run pytest crawler/tests/
 
     - name: SQL Lint (SQLFluff)
       run: |
-        cd dbt_tiki && sqlfluff lint models --dialect duckdb
+        cd dbt_tiki && uv run sqlfluff lint models --dialect duckdb

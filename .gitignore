@@ -34,7 +34,7 @@ dbt_tiki/logs/
 .secrets/
 
 # Data Previews
-preview_data/
+# preview_data/
 
 # IDEs
 .vscode/
