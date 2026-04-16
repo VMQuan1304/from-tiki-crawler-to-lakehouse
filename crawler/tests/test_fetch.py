@@ -1,6 +1,4 @@
-import pytest
-import pandas as pd
-from crawler.fetch_tiki import fetch_products, save_to_minio
+from crawler.fetch_tiki import fetch_products
 
 # Using pytest-mock or monkeypatch in reality to stub API calls.
 # Here is a placeholder mock test structure.

@@ -1,5 +1,4 @@
 import os
-import json
 import boto3
 import requests
 import pandas as pd
@@ -10,8 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Dummy URL to simulate Tiki Product API
-# Note: Tiki APIs change frequently, a real implementation requires reverse engineering their exact endpoints
-TIKI_API_URL = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&include=advertisement&aggregations=2&version=home-persionalized&category=1883"
+# Note: Tiki APIs change frequently, a real implementation requires
+# reverse engineering their exact endpoints
+TIKI_API_URL = "https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&include=advertisement&aggregations=2&version=home-persionalized&category=1883"  # noqa: E501
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "admin")
