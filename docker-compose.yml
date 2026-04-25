@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # 1. MINIO - Object Storage Layer
@@ -9,13 +9,14 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: minio_password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     networks:
       - lakehouse_net
+    restart: "no"
 
   minio-init:
     image: minio/mc:latest
@@ -25,28 +26,30 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5 &&
-      /usr/bin/mc config host add myminio http://minio:9000 admin minio_password &&
+      /usr/bin/mc config host add myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
       /usr/bin/mc mb myminio/raw-data || true &&
       /usr/bin/mc mb myminio/lakehouse || true &&
       exit 0
       "
     networks:
       - lakehouse_net
+    restart: "no"
 
   # 2. POSTGRES - Metastore & Superset Backend
   postgres:
     image: postgres:15
     container_name: tiki_postgres
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin_password
-      POSTGRES_DB: metastore
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
       - lakehouse_net
+    restart: "no"
 
   # 3. TRINO - Distributed Query Engine
   trino:
@@ -56,8 +59,10 @@ services:
       - "8080:8080"
     volumes:
       - ./trino/etc:/etc/trino
+      - trino_metastore:/var/lib/trino/metastore
     networks:
       - lakehouse_net
+    restart: "no"
     depends_on:
       - minio
       - postgres
@@ -69,18 +74,21 @@ services:
     ports:
       - "8088:8088"
     environment:
-      SUPERSET_SECRET_KEY: "super_secret_lakehouse_key"
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
       SUPERSET_LOAD_EXAMPLES: "no"
-      SQLALCHEMY_DATABASE_URI: "postgresql://admin:admin_password@postgres:5432/metastore"
+      SQLALCHEMY_DATABASE_URI: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      PYTHONPATH: "/app/pythonpath:/app/superset_home/.local/lib/python3.10/site-packages"
     networks:
       - lakehouse_net
+    restart: "no"
     # Initialize the database and admin user
     entrypoint: >
       /bin/sh -c "
+      pip install trino &&
       superset db upgrade &&
-      superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@lakehouse.local --password admin_password &&
+      superset fab create-admin --username ${SUPERSET_ADMIN_USER} --firstname Superset --lastname Admin --email admin@lakehouse.local --password ${SUPERSET_ADMIN_PASSWORD} &&
       superset init &&
-      gunicorn -w 2 --timeout 120 -b 0.0.0.0:8088 --limit-request-line 0 --limit-request-field_size 0 superset.app:create_app()
+      gunicorn -w 2 --timeout 120 -b 0.0.0.0:8088 --limit-request-line 0 --limit-request-field_size 0 'superset.app:create_app()'
       "
     depends_on:
       - postgres
@@ -93,3 +101,4 @@ networks:
 volumes:
   minio_data:
   pg_data:
+  trino_metastore:

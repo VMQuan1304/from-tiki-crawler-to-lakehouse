@@ -7,7 +7,6 @@ dbt_tiki:
       extensions:
         - httpfs
         - aws
-      # DuckDB requires specific credentials injection for S3 when not using IAM roles
       settings:
         s3_endpoint: 'localhost:9000'
         s3_access_key_id: 'admin'
@@ -15,3 +14,13 @@ dbt_tiki:
         s3_region: 'us-east-1'
         s3_use_ssl: false
         s3_url_style: 'path'
+    trino:
+      type: trino
+      method: none
+      user: admin
+      password: ""
+      host: localhost
+      port: 8080
+      catalog: iceberg
+      schema: marts
+      threads: 4

@@ -32,3 +32,9 @@ lint:
 # Run tests
 test:
 	uv run pytest crawler/tests/
+
+# Start Airflow Standalone
+airflow-start:
+	export AIRFLOW_HOME=$(PWD)/airflow_home && \
+	export AIRFLOW__WEBSERVER__WEB_SERVER_PORT=8081 && \
+	uv run airflow standalone
