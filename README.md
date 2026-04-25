@@ -12,6 +12,10 @@
 
 ## 🛠️ Tech Stack & Architecture
 
+<div align="center">
+  <img src="images/architecture.png" alt="Data Lakehouse Architecture" width="800">
+</div>
+
 | Component | Technology | Description |
 | :--- | :---: | :--- |
 | **Ingestion Engine** | 🐍 Python | Custom crawlers scraping Tiki API using `requests` and converting structures to nested `Parquet`. |
