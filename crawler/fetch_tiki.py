@@ -12,21 +12,26 @@ load_dotenv()
 # Tiki Book Category ID: 8322
 DEFAULT_CATEGORY_ID = 8322
 # Tiki usually caps listings at 50 pages
-DEFAULT_NUM_PAGES = 10  # We'll fetch 10 pages (~400 books) by default, user can increase this
+DEFAULT_NUM_PAGES = 10  # Default 10 pages (~400 books)
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "admin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio_password")
 BUCKET_NAME = "raw-data"
 
+
 def fetch_products(category_id=DEFAULT_CATEGORY_ID, num_pages=DEFAULT_NUM_PAGES):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     all_products = []
-    
+
     for page in range(1, num_pages + 1):
-        api_url = f"https://tiki.vn/api/personalish/v1/blocks/listings?limit=40&include=advertisement&aggregations=2&version=home-persionalized&category={category_id}&page={page}"
+        api_url = (
+            "https://tiki.vn/api/personalish/v1/blocks/listings?"
+            f"limit=40&include=advertisement&aggregations=2&"
+            f"version=home-persionalized&category={category_id}&page={page}"
+        )
         print(f"Fetching page {page} from: {api_url}")
-        
+
         try:
             response = requests.get(api_url, headers=headers, timeout=15)
             if response.status_code == 200:
@@ -42,11 +47,12 @@ def fetch_products(category_id=DEFAULT_CATEGORY_ID, num_pages=DEFAULT_NUM_PAGES)
         except requests.RequestException as e:
             print(f"Request failed at page {page}: {e}")
             break
-            
+
         # Be nice to Tiki
         time.sleep(1)
-        
+
     return all_products
+
 
 def save_to_minio(data):
     if not data:
@@ -60,7 +66,7 @@ def save_to_minio(data):
     ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     df["extracted_at"] = ts_str
 
-    # Sanitize complex nested types (dict/list) to strings for Parquet compatibility
+    # Sanitize complex nested types (dict/list) for Parquet compatibility
     # This is important for DuckDB/Trino to handle columns easily
     for col in df.columns:
         if df[col].apply(lambda x: isinstance(x, (dict, list))).any():
@@ -90,6 +96,7 @@ def save_to_minio(data):
 
     s3_client.put_object(Bucket=BUCKET_NAME, Key=file_key, Body=parquet_buffer.getvalue())
     print("Upload complete.")
+
 
 if __name__ == "__main__":
     # You can increase num_pages to fetch more data (max 50)

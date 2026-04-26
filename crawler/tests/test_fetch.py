@@ -5,7 +5,7 @@ from crawler.fetch_tiki import fetch_products
 
 
 def test_fetch_products_returns_list(monkeypatch):
-    """Ensure our fetch function returns a list object representing JSON array"""
+    """Ensure our fetch function returns a list object."""
 
     class MockResponse:
         status_code = 200

@@ -1,16 +1,15 @@
-
-select
-    id as product_id,
-    name as product_name,
+SELECT
+    id AS product_id,
+    name AS product_name,
     author_name,
-    try_cast(price as integer) as price,
-    try_cast(original_price as integer) as original_price,
-    try_cast(discount as integer) as discount,
-    try_cast(discount_rate as float) as discount_rate,
-    try_cast(rating_average as float) as rating_average,
-    try_cast(review_count as integer) as review_count,
     inventory_status,
-    try_cast(regexp_extract(quantity_sold, '''value'':\s*([0-9]+)', 1) as integer) as quantity_sold,
     brand_name,
-    extracted_at
-from read_parquet('s3://raw-data/tiki_products/*.parquet')
+    extracted_at,
+    TRY_CAST(price AS integer) AS price,
+    TRY_CAST(original_price AS integer) AS original_price,
+    TRY_CAST(discount AS integer) AS discount,
+    TRY_CAST(discount_rate AS float) AS discount_rate,
+    TRY_CAST(rating_average AS float) AS rating_average,
+    TRY_CAST(review_count AS integer) AS review_count,
+    TRY_CAST(REGEXP_EXTRACT(quantity_sold, '''value'':\s*([0-9]+)', 1) AS integer) AS quantity_sold
+FROM READ_PARQUET('s3://raw-data/tiki_products/*.parquet')
