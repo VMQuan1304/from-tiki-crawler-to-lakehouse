@@ -34,13 +34,13 @@ This project implements a **Modern Data Stack (MDS)** Lakehouse architecture to 
 
 | Layer | Component | Technology | Description |
 | :--- | :--- | :---: | :--- |
-| **Ingestion** | Crawler | 🐍 Python | Scrapes Tiki API, sanitizes data, and uploads to MinIO as `Parquet`. |
-| **Storage** | Object Store | 🪣 MinIO | S3-compatible storage for Raw (Bronze) and Iceberg (Silver/Gold) layers. |
-| **Metadata** | Metastore | 🐘 Postgres | Stores Iceberg metadata and Trino catalog info. |
-| **Compute** | SQL Engine | ⚡ Trino | Distributed engine for querying Iceberg tables via SQL. |
-| **Transform** | Data Modeling | 🔨 dbt + DuckDB | Transforms raw JSON/Parquet into structured analytics models. |
-| **Orchestration** | Scheduler | 🌬️ Airflow | Orchestrates the full Crawl -> Transform -> Analytics flow. |
-| **Visualization** | BI Tool | 📊 Superset | Connected to Trino for building interactive dashboards. |
+| **Ingestion** | Crawler | 🐍 Python | Scrapes Tiki API, sanitizes nested data, and uploads to MinIO as `Parquet`. |
+| **Storage** | Object Store | 🪣 MinIO | S3-compatible storage hosting both raw data (Bronze) and transformed data (Gold). |
+| **Metadata** | Metastore | 🐘 Postgres | Dual role: (1) JDBC Catalog storing Iceberg table metadata for Trino, (2) Backend DB for Superset. |
+| **Compute** | SQL Engine | ⚡ Trino | Distributed SQL engine querying data on MinIO via the Iceberg catalog (backed by Postgres). |
+| **Transform** | Data Modeling | 🔨 dbt + DuckDB | Reads raw Parquet from MinIO, transforms and writes cleaned external Parquet files back to MinIO. Runs **outside** Docker. |
+| **Orchestration** | Scheduler | 🌬️ Airflow | Orchestrates the daily pipeline: Crawl → Transform → Analytics. |
+| **Visualization** | BI Tool | 📊 Superset | Connects to Trino (`iceberg` catalog) for interactive dashboards. |
 
 ---
 
@@ -60,7 +60,7 @@ tiki-lakehouse/
 │   ├── dbt_project.yml      
 │   └── profiles.yml         # DuckDB S3 configuration
 ├── trino/                   # Trino configuration (Catalogs, Node, etc.)
-│   └── etc/catalog/         # Iceberg & Hive catalog properties
+│   └── etc/catalog/         # Iceberg catalog (active) & Hive catalog (pre-configured, unused)
 ├── Makefile                 # Shortcut commands for orchestration
 ├── docker-compose.yml       # Infrastructure (MinIO, Trino, Postgres, Superset)
 ├── run_project.sh           # One-click initialization script
@@ -117,10 +117,10 @@ make dbt-run          # Transform data to Iceberg tables
 
 ## 📊 Data Pipeline Flow
 
-1.  **Bronze Layer (Raw)**: `crawler/fetch_tiki.py` fetches data from Tiki's listing API. It handles nested structures by stringifying complex objects and saves them as **Parquet** files in the `raw-data` bucket in MinIO.
-2.  **Silver Layer (Staging)**: dbt staging models (`stg_tiki_books.sql`) read raw Parquet files, cast types, and flatten nested JSON strings using DuckDB's JSON extensions.
-3.  **Gold Layer (Marts)**: Final fact tables (`fct_tiki_books.sql`) are materialized as **Apache Iceberg** tables in MinIO. These are optimized for high-performance querying.
-4.  **Analytics**: Trino queries the Gold layer, and Superset visualizes it. A separate `analytics_plot.py` script can also be used to generate static charts.
+1.  **Bronze Layer (Raw)**: `crawler/fetch_tiki.py` fetches data from Tiki's listing API. It stringifies nested objects (dict/list) for Parquet compatibility and uploads to `s3://raw-data/tiki_products/` in MinIO.
+2.  **Silver Layer (Staging)**: dbt staging model (`stg_tiki_books.sql`) reads all raw Parquet files via DuckDB's `READ_PARQUET('s3://...')`, casts types with `TRY_CAST`, and extracts `quantity_sold` from stringified dicts using `REGEXP_EXTRACT`.
+3.  **Gold Layer (Marts)**: Fact table (`fct_tiki_books.sql`) is materialized as an **external Parquet file** at `s3://raw-data/marts/fct_tiki_books.parquet`. This is done by dbt + DuckDB directly (not via Trino).
+4.  **Serving**: Trino queries the Gold layer via its **Iceberg catalog** (metadata stored in PostgreSQL). Superset connects to Trino for interactive dashboards. A separate `analytics_plot.py` uses DuckDB to generate static charts.
 
 ---
 
@@ -152,20 +152,33 @@ The DAG `tiki_lakehouse_daily_pipeline` will appear in the UI, managing the sequ
 
 ## 🖼️ Screenshots Gallery
 
-### 1. Ingestion & Storage
+### 1. Tiki Product Listings
+<img src="images/01-tiki-listings.png" width="800" alt="Tiki Listings">
+
+### 2. Run Project Script
+<img src="images/02-run-project.png" width="800" alt="Run Project">
+
+### 3. Sample Crawled Data
+<img src="images/03-sample-data.png" width="800" alt="Sample Data">
+
+### 4. MinIO S3 Storage
+<img src="images/04-s3-storage.png" width="800" alt="MinIO S3 Storage">
+
+### 5. Superset — Connect & Visualize
 <p align="center">
-  <img src="images/01-tiki-listings.png" width="45%" alt="Tiki Listings">
-  <img src="images/04-s3-storage.png" width="45%" alt="MinIO S3 Storage">
+  <img src="images/05.01-superset-connect-trino.png" width="45%">
+  <img src="images/05.02-superset-connect-hive.png" width="45%">
+</p>
+<p align="center">
+  <img src="images/05.03-superset-create-dataset.png" width="45%">
+  <img src="images/05.04-superset-demo-chart.png" width="45%">
 </p>
 
-### 2. Infrastructure & Analytics
-<p align="center">
-  <img src="images/02-run-project.png" width="45%" alt="Run Project">
-  <img src="images/top_10_books.png" width="45%" alt="Analytics Plot">
-</p>
+### 6. Superset Dashboard
+<img src="images/05.04-superset-demo-dashboard.png" width="800" alt="Superset Dashboard">
 
-### 3. Superset Dashboards
-<img src="images/05.04-superset-demo-dashboard.png" width="100%" alt="Superset Dashboard">
+### 7. Analytics — Top 10 Best-Selling Books
+<img src="images/top_10_books.png" width="800" alt="Analytics Plot">
 
 ---
 
