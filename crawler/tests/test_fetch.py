@@ -20,7 +20,7 @@ def test_fetch_products_returns_list(monkeypatch):
 
     monkeypatch.setattr(requests, "get", mock_get)
 
-    products = fetch_products()
+    products = fetch_products(num_pages=1)
     assert isinstance(products, list)
     assert len(products) == 1
     assert products[0]["id"] == 1
