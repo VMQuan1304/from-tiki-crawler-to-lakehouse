@@ -10,13 +10,15 @@ requires-python = ">=3.9"
 dependencies = [
     # Crawler dependencies
     "requests==2.31.0",
+    "urllib3<2.2",
+    "charset-normalizer<4",   
     "pandas==2.2.1",
     "boto3==1.34.69",
     "python-dotenv==1.0.1",
     "pyarrow==15.0.2",
     # dbt dependencies
     "dbt-duckdb",
-    "sqlfluff"
+    "sqlfluff",
 ]
 
 [project.optional-dependencies]
