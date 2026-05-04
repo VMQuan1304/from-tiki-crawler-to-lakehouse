@@ -31,7 +31,10 @@ def _mock_get(responses):
     it = iter(responses)
 
     def mock(url, headers, timeout):
-        val = next(it)
+        try:
+            val = next(it)
+        except StopIteration:
+            raise AssertionError("_mock_get ran out of responses — add more items to the list")
         if isinstance(val, Exception):
             raise val
         return val
